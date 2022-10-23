@@ -3,8 +3,10 @@ import os
 from pathlib import Path
 from tifffile import TiffFile
 from torch.utils.data import Dataset
+import torchvision.transforms as transforms
 
 from lcc import DATASET_DIR
+from lcc.transforms import Normalize
 
 # image size of the images and label masks
 IMG_SIZE = 256
@@ -63,6 +65,9 @@ class LCCDataset(Dataset):
 
     def __init__(self, train=True, transform=None):
         self.transform = transform
+        self.train_images_csv = np.genfromtxt(DATASET_DIR.joinpath('train_images.csv'), skip_header=True, dtype=np.int16)
+        self.train_labels_csv = np.genfromtxt(DATASET_DIR.joinpath('train_labels.csv'), skip_header=True, dtype=np.int16)
+        self.test_images_csv = np.genfromtxt(DATASET_DIR.joinpath('test_images.csv'), skip_header=True, dtype=np.int16)
         train_img_path = DATASET_DIR.joinpath('train', 'images')
         train_mask_path = DATASET_DIR.joinpath('train', 'masks')
         test_img_path = DATASET_DIR.joinpath('test', 'images')
@@ -88,10 +93,10 @@ class LCCDataset(Dataset):
         if index>=self.__len__():
             raise IndexError(f"Index {index} out of range [0, {self.__len__()}]")
         if self.train:
-            img_path = self.train_img_path.joinpath(f'{index}.tif')
-            mask_path = self.train_mask_path.joinpath(f'{index}.tif')
+            img_path = self.train_img_path.joinpath(f'{self.train_images_csv[index]}.tif')
+            mask_path = self.train_mask_path.joinpath(f'{self.train_images_csv[index]}.tif')
         else:
-            img_path = self.test_img_path.joinpath(f'{index}.tif')
+            img_path = self.test_img_path.joinpath(f'{self.test_images_csv[index]}.tif')
             mask_path = None
         mask = None
         with TiffFile(img_path) as tif:
@@ -100,7 +105,14 @@ class LCCDataset(Dataset):
                 with TiffFile(mask_path) as tif:
                     mask = tif.asarray()
                     mask = mask[..., None]
-        if self.transform:
-            img, mask = self.transform(img, mask)
         sample = {'image': img, 'mask': mask}
+        if self.transform:
+            sample = self.transform(sample)
         return sample
+
+def get_transforms(train=True):
+    """Return a list of transformations to apply to the images and masks"""
+    if train:
+        return transforms.Compose([
+            Normalize(1, TRAIN_PIXELS_MAX),
+        ])
