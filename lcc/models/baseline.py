@@ -31,28 +31,29 @@ class Baseline(nn.Module):
         input_shape,
         n_classes,
         output_activation,
-        n_layers=4):
+        n_layers=4,
+        device=torch.device('cpu')):
         super().__init__()
         self.pre_down = []
-        self.pre_down.append(nn.Conv2d(input_shape[0], FILTERS_DOWN, **CONV2D_PARAMS))
-        self.pre_down.append(ConvBlock(FILTERS_DOWN, FILTERS_DOWN, **CONV2D_PARAMS))
+        self.pre_down.append(nn.Conv2d(input_shape[0], FILTERS_DOWN, **CONV2D_PARAMS).to(device))
+        self.pre_down.append(ConvBlock(FILTERS_DOWN, FILTERS_DOWN, **CONV2D_PARAMS).to(device))
         self.pre_down.append(123)
-        self.pre_down.append(ConvBlock(FILTERS_DOWN, FILTERS_DOWN, **CONV2D_PARAMS))
-        self.pre_down.append(nn.MaxPool2d(**MAXPOOL2D_PARAMS))
+        self.pre_down.append(ConvBlock(FILTERS_DOWN, FILTERS_DOWN, **CONV2D_PARAMS).to(device))
+        self.pre_down.append(nn.MaxPool2d(**MAXPOOL2D_PARAMS).to(device))
         self.down = []
 
         for _ in range(n_layers):
-            self.down.append(ConvBlock(in_channels=FILTERS_DOWN, out_channels=FILTERS_DOWN, **CONV2D_PARAMS))
-            self.down.append(ConvBlock(in_channels=FILTERS_DOWN, out_channels=FILTERS_DOWN, **CONV2D_PARAMS))
+            self.down.append(ConvBlock(in_channels=FILTERS_DOWN, out_channels=FILTERS_DOWN, **CONV2D_PARAMS).to(device))
+            self.down.append(ConvBlock(in_channels=FILTERS_DOWN, out_channels=FILTERS_DOWN, **CONV2D_PARAMS).to(device))
             self.down.append(123)
-            self.down.append(ConvBlock(in_channels=FILTERS_DOWN, out_channels=FILTERS_DOWN, **CONV2D_PARAMS))
-            self.down.append(nn.MaxPool2d(**MAXPOOL2D_PARAMS))
+            self.down.append(ConvBlock(in_channels=FILTERS_DOWN, out_channels=FILTERS_DOWN, **CONV2D_PARAMS).to(device))
+            self.down.append(nn.MaxPool2d(**MAXPOOL2D_PARAMS).to(device))
 
         self.transition=nn.Sequential(
             ConvBlock(in_channels=FILTERS_DOWN, out_channels=FILTERS_DOWN, **CONV2D_PARAMS),
             ConvBlock(in_channels=FILTERS_DOWN, out_channels=FILTERS_DOWN, **CONV2D_PARAMS),
             ConvTransposeBlock(in_channels=FILTERS_DOWN, out_channels=FILTERS_DOWN, **CONV2D_TRANSPOSE_PARAMS)
-        )
+        ).to(device)
 
 
         self.up = []
@@ -62,7 +63,7 @@ class Baseline(nn.Module):
                     ConvBlock(in_channels=2*FILTERS_DOWN, out_channels=FILTERS_UP, **CONV2D_PARAMS),
                     ConvBlock(in_channels=FILTERS_UP, out_channels=FILTERS_DOWN, **CONV2D_PARAMS),
                     ConvTransposeBlock(in_channels=FILTERS_DOWN, out_channels=FILTERS_DOWN, **CONV2D_TRANSPOSE_PARAMS)
-                )
+                ).to(device)
             )
         
         self.post_up = nn.Sequential(
@@ -70,7 +71,7 @@ class Baseline(nn.Module):
             ConvBlock(in_channels=FILTERS_UP, out_channels=FILTERS_DOWN, **CONV2D_PARAMS),
             nn.Conv2d(FILTERS_DOWN, n_classes, kernel_size=(1,1), padding='same'),
             nn.Sigmoid(),
-        )
+        ).to(device)
 
 
     def forward(self, x):
