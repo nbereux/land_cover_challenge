@@ -1,4 +1,3 @@
-from transformers import ViTConfig
 import torch
 from tqdm import tqdm
 
