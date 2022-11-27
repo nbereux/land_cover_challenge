@@ -2,6 +2,7 @@ import numpy as np
 import os
 from pathlib import Path
 from tifffile import TiffFile
+import torch
 from torch.utils.data import Dataset
 import torchvision.transforms as transforms
 
@@ -88,6 +89,13 @@ class LCCDataset(Dataset):
         else:
             return TESTSET_SIZE
 
+    def __repr__(self) -> str:
+
+        string = f"{self.__class__.__name__}(\n"
+        string += f"    train={self.train},\n"
+        string += f"    len={self.__len__()}\n"
+        string += f")"
+        return string
 
     def __getitem__(self, index):
         if index>=self.__len__():
@@ -108,6 +116,8 @@ class LCCDataset(Dataset):
         sample = {'image': img, 'mask': mask}
         if self.transform:
             sample = self.transform(sample)
+        sample['image'] = torch.from_numpy(sample['image']).to(torch.float32)
+        sample['mask'] = torch.from_numpy(sample['mask']).to(torch.long)    
         return sample
 
 def get_transforms(train=True):
