@@ -93,6 +93,7 @@ class Baseline(nn.Module):
             x = layer(x)
         x = torch.cat([x, save_down_x[-1]], dim=1)
         x = self.post_up(x)
+        # return nn.functional.softmax(x, dim=1)
         return x
 
 class ConvBlock(nn.Module):

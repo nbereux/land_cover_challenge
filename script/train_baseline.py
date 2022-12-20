@@ -5,7 +5,7 @@ from lcc.models.baseline import Baseline
 from lcc.dataset import LCCDataset, get_transforms
 from lcc import OUTPUT_DIR
 
-BATCH_SIZE = 32
+BATCH_SIZE = 8
 N_EPOCHS = 90
 LR = 1e-3
 
@@ -16,7 +16,7 @@ def main(dataset: LCCDataset):
         input_shape=(4,256,256),
         n_classes=10, 
         output_activation='softmax',
-        n_layers=2,
+        n_layers=4,
         device=device,
     ).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=LR, weight_decay=0)

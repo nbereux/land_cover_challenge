@@ -119,6 +119,65 @@ class LCCDataset(Dataset):
         sample['mask'] = torch.from_numpy(sample['mask']).to(torch.long)    
         return sample
 
+class SmallDataset(Dataset):
+    
+        def __init__(self, train=True, transform=None, size=100):
+            self.transform = transform
+            self.train_images_csv = np.genfromtxt(DATASET_DIR.joinpath('train_images.csv'), skip_header=True, dtype=np.int16)
+            self.train_labels_csv = np.genfromtxt(DATASET_DIR.joinpath('train_labels.csv'), skip_header=True, dtype=np.int16)
+            self.test_images_csv = np.genfromtxt(DATASET_DIR.joinpath('test_images.csv'), skip_header=True, dtype=np.int16)
+            train_img_path = DATASET_DIR.joinpath('train', 'images')
+            train_mask_path = DATASET_DIR.joinpath('train', 'masks')
+            test_img_path = DATASET_DIR.joinpath('test', 'images')
+            if not(os.path.exists(train_img_path)):
+                raise FileNotFoundError(f"Training images not found at {train_img_path}")
+            if not(os.path.exists(train_mask_path)):
+                raise FileNotFoundError(f"Training masks not found at {train_mask_path}")
+            if not(os.path.exists(test_img_path)):
+                raise FileNotFoundError(f"Test images not found at {test_img_path}")
+            self.train_img_path = train_img_path
+            self.train_mask_path = train_mask_path
+            self.test_img_path = test_img_path
+            self.train = train
+            self.size = size
+    
+        def __len__(self):
+            if self.train:
+                return self.size
+            else:
+                return self.size
+    
+        def __repr__(self) -> str:
+    
+            string = f"{self.__class__.__name__}(\n"
+            string += f"    train={self.train},\n"
+            string += f"    len={self.__len__()}\n"
+            string += f")"
+            return string
+    
+        def __getitem__(self, index):
+            if index>=self.__len__():
+                raise IndexError(f"Index {index} out of range [0, {self.__len__()}]")
+            if self.train:
+                img_path = self.train_img_path.joinpath(f'{self.train_images_csv[index]}.tif')
+                mask_path = self.train_mask_path.joinpath(f'{self.train_images_csv[index]}.tif')
+            else:
+                img_path = self.test_img_path.joinpath(f'{self.test_images_csv[index]}.tif')
+                mask_path = None
+            mask = None
+            with TiffFile(img_path) as tif:
+                img = tif.asarray()
+                if mask_path is not None:
+                    with TiffFile(mask_path) as tif:
+                        mask = tif.asarray()
+                        mask = mask[..., None]
+            sample = {'image': img, 'mask': mask}
+            if self.transform:
+                sample = self.transform(sample)
+            sample['image'] = torch.from_numpy(sample['image']).to(torch.float32)
+            sample['mask'] = torch.from_numpy(sample['mask']).to(torch.long)    
+            return sample
+        
 def get_transforms(train=True):
     """Return a list of transformations to apply to the images and masks"""
     if train:
