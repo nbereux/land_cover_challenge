@@ -178,7 +178,7 @@ class SmallDataset(Dataset):
             sample['mask'] = torch.from_numpy(sample['mask']).to(torch.long)    
             return sample
         
-def get_transforms(train=True):
+def get_transforms(train=True, augment=False):
     """Return a list of transformations to apply to the images and masks"""
     if train:
         return transforms.Compose([

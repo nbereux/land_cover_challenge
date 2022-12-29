@@ -25,6 +25,7 @@ class ConvVAE(nn.Module):
         self.fc4 = nn.Linear(1024, 64 * 64 * 64)
         self.deconv1 = nn.ConvTranspose2d(64, 32, 3, 2, 1, 1)
         self.deconv2 = nn.ConvTranspose2d(32, n_classes, 3, 2, 1, 1)
+        self.name = 'ConvVAE'
 
     def encode(self, x):
         h1 = self.relu(self.conv1(x))

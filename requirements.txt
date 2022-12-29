@@ -6,3 +6,9 @@ setuptools==63.4.1
 tifffile==2021.7.2
 torch==1.12.1
 transformers==4.24.0
+segmentation-models-pytorch==0.3.1
+scipy==1.9.3
+scikit-learn==1.2.0
+tqdm==4.64.1
+pandas==1.5.2
+mlflow==2.0.1

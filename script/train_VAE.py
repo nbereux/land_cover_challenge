@@ -2,7 +2,7 @@ import numpy as np
 import torch
 from tqdm import tqdm
 
-from lcc.dataset import SmallDataset, get_transforms
+from lcc.dataset import SmallDataset, get_transforms, TRAIN_CLASS_COUNTS, N_CLASSES, IGNORED_CLASSES_IDX
 from lcc.models.VAE import ConvVAE
 from lcc import OUTPUT_DIR, MODEL_DIR
 
@@ -57,7 +57,9 @@ def main(n_sample_images: int = 1000):
         device=device,
     ).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=LR, weight_decay=0)
-    criterion = torch.nn.CrossEntropyLoss()
+    class_weight = (1 / TRAIN_CLASS_COUNTS[2:])* TRAIN_CLASS_COUNTS[2:].sum() / (N_CLASSES-2)
+    class_weight[IGNORED_CLASSES_IDX] = 0
+    criterion = torch.nn.CrossEntropyLoss(class_weight=class_weight)
     all_losses_train = []
     all_losses_test = []
     for epoch in range(N_EPOCH):

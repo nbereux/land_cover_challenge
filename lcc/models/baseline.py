@@ -34,6 +34,7 @@ class Baseline(nn.Module):
         n_layers=4,
         device=torch.device('cpu')):
         super().__init__()
+        self.name = 'Baseline'
         self.pre_down = []
         self.pre_down.append(nn.Conv2d(input_shape[0], FILTERS_DOWN, **CONV2D_PARAMS).to(device))
         self.pre_down.append(ConvBlock(FILTERS_DOWN, FILTERS_DOWN, **CONV2D_PARAMS).to(device))

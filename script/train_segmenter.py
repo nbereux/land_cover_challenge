@@ -1,42 +1,38 @@
-from transformers import ViTConfig
+import numpy as np
 import torch
-from tqdm import tqdm
 
 from lcc.models.segmenter import Segmenter
-from lcc.dataset import LCCDataset, get_transforms
+from lcc.dataset import LCCDataset, get_transforms, SmallDataset, TRAIN_CLASS_COUNTS, N_CLASSES, IGNORED_CLASSES_IDX
 from lcc import OUTPUT_DIR
+from lcc.train_utils import train
 
-N_EPOCHS = 10
+N_EPOCHS = 30
 LR = 1e-3
-BATCH_SIZE = 8
+BATCH_SIZE = 16
 
 
-def main(dataset: LCCDataset):
+def main(n_sample_images: int = 10000):
+    dataset = SmallDataset(size=n_sample_images, transform=get_transforms(train=True))
+    train_size = int(0.8 * len(dataset))
+    test_size = len(dataset) - train_size
+    train_dataset, test_dataset = torch.utils.data.random_split(dataset, [train_size, test_size])
+    train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=8)
+    test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=8)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    encoder_config = ViTConfig()
-    encoder_config.image_size = 256
-    encoder_config.num_channels = 4
-    segmenter = Segmenter(encoder_config, device).to(device)
-    optimizer = torch.optim.SGD(segmenter.parameters(), lr=LR, weight_decay=0)
-    criterion = torch.nn.CrossEntropyLoss()
-    dataloader = torch.utils.data.DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True)
-    all_losses = []
-    for epoch in range(N_EPOCHS):
-        for _, batch in (pbar:=tqdm(enumerate(dataloader), total=len(dataloader), desc=f'Epoch {epoch}', )): 
-            optimizer.zero_grad()
-            image, mask = batch['image'], batch['mask'].to(torch.float32).to(device)
-            image = image.permute(0, 3, 1, 2)  
-            # print(image.shape)
-            output = segmenter(image)
-            # print(mask.dtype)
-            # print(output.dtype)
-            loss = criterion(output.unsqueeze(-1), mask)
-            loss.backward()
-            optimizer.step()
-            pbar.set_postfix(loss=loss.item())
-            # print(loss.item())
-
+    model = Segmenter(
+        in_size=(4,256,256),
+        n_classes=10, 
+        depth=6,
+        patch_size=16
+    ).to(device)
+    #optimizer = torch.optim.Adam(model.parameters(), lr=LR, weight_decay=0)
+    optimizer = torch.optim.SGD(model.parameters(), lr=LR, momentum=0.9, weight_decay=0)
+    class_weight = np.ones(N_CLASSES)
+    class_weight[2:] = (1 / TRAIN_CLASS_COUNTS[2:])* TRAIN_CLASS_COUNTS[2:].sum() / (N_CLASSES-2)
+    class_weight[IGNORED_CLASSES_IDX] = 0
+    class_weight = torch.tensor(class_weight).to(device).float()
+    criterion = torch.nn.CrossEntropyLoss(weight=class_weight)
+    train(model, train_dataloader, test_dataloader, optimizer, criterion, device, N_EPOCHS)
 
 if __name__=="__main__":
-    dataset = LCCDataset(transform=get_transforms())
-    main(dataset)
+    main()
