@@ -6,7 +6,7 @@ from torch.utils.data import Dataset
 import torchvision.transforms as transforms
 
 from lcc import DATASET_DIR
-from lcc.transforms import Normalize
+from lcc.transforms import Normalize, AllTransforms
 
 # image size of the images and label masks
 IMG_SIZE = 256
@@ -115,8 +115,12 @@ class LCCDataset(Dataset):
         sample = {'image': img, 'mask': mask}
         if self.transform:
             sample = self.transform(sample)
-        sample['image'] = torch.from_numpy(sample['image']).to(torch.float32)
-        sample['mask'] = torch.from_numpy(sample['mask']).to(torch.long)    
+        if not(torch.is_tensor(sample['image'])):
+            sample['image'] = torch.from_numpy(sample['image']).to(torch.float32)
+        if sample['mask'] is not None and not(torch.is_tensor(sample['mask'])):
+            sample['mask'] = torch.from_numpy(sample['mask']).to(torch.long)
+        if sample['mask'] is None:
+            sample['mask'] = torch.zeros(1)
         return sample
 
 class SmallDataset(Dataset):
@@ -174,13 +178,17 @@ class SmallDataset(Dataset):
             sample = {'image': img, 'mask': mask}
             if self.transform:
                 sample = self.transform(sample)
-            sample['image'] = torch.from_numpy(sample['image']).to(torch.float32)
-            sample['mask'] = torch.from_numpy(sample['mask']).to(torch.long)    
+            if not(torch.is_tensor(sample['image'])):
+                sample['image'] = torch.from_numpy(sample['image']).to(torch.float32)
+            if not(torch.is_tensor(sample['mask'])):
+                sample['mask'] = torch.from_numpy(sample['mask']).to(torch.long)
             return sample
         
 def get_transforms(train=True, augment=False):
     """Return a list of transformations to apply to the images and masks"""
-    if train:
-        return transforms.Compose([
-            Normalize(1, TRAIN_PIXELS_MAX),
-        ])
+    all_transforms = []
+    all_transforms.append(Normalize(1, TRAIN_PIXELS_MAX))
+    return transforms.Compose(all_transforms)
+
+def get_transforms_2():
+    return AllTransforms(1, TRAIN_PIXELS_MAX)

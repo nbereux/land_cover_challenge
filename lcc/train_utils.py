@@ -18,7 +18,8 @@ def train_one_epoch(model, dataloader, optimizer, criterion, device):
     for i, batch in (pbar:=tqdm(enumerate(dataloader), total=len(dataloader))):
         optimizer.zero_grad()
         image, mask = batch['image'], batch['mask'].to(device)
-        image = image.permute(0, 3, 1, 2)
+        #print(image.shape)
+        #image = image.permute(0, 3, 1, 2)
         output = model(image.to(device))
         loss = criterion(output, mask.squeeze())
         loss.backward()
@@ -40,7 +41,7 @@ def test_one_epoch(model, dataloader, criterion, device):
         model.eval()
         for _, batch in (pbar:=tqdm(enumerate(dataloader), total=len(dataloader))):
             image, mask = batch['image'], batch['mask'].to(device)
-            image = image.permute(0, 3, 1, 2)
+            #image = image.permute(0, 3, 1, 2)
             output = model(image.to(device))
             loss = criterion(output, mask.squeeze())
             epoch_losses.append(loss.item())
@@ -95,4 +96,4 @@ def train(model, train_dataloader, test_dataloader, optimizer, criterion, device
             log_metric('test_loss', test_loss, step=epoch)
             log_metric('test_jac_idx', test_jac_idx, step=epoch)
             log_metric('test_kl_div', test_kl_div, step=epoch)
-            torch.save(model.state_dict(), {MODEL_DIR}.joinpath(f'{model.name}.pth'))
+            torch.save(model.state_dict(), MODEL_DIR.joinpath(f'{model.name}.pth'))
