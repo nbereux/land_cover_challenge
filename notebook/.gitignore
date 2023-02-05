@@ -1,2 +1,5 @@
 *
 !.gitignore
+!analyse_model.ipynb
+!analyse_dataset.ipynb
+!graph_curve.ipynb
