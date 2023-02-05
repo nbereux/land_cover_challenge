@@ -19,7 +19,9 @@ def train_one_epoch(model, dataloader, optimizer, criterion, device):
         optimizer.zero_grad()
         image, mask = batch['image'], batch['mask'].to(device)
         #print(image.shape)
-        #image = image.permute(0, 3, 1, 2)
+        if "Segmenter" in model.name:
+            image = image.permute(0, 3, 1, 2)
+        image = image.permute(0, 3, 1, 2)
         output = model(image.to(device))
         loss = criterion(output, mask.squeeze())
         loss.backward()
@@ -41,7 +43,9 @@ def test_one_epoch(model, dataloader, criterion, device):
         model.eval()
         for _, batch in (pbar:=tqdm(enumerate(dataloader), total=len(dataloader))):
             image, mask = batch['image'], batch['mask'].to(device)
-            #image = image.permute(0, 3, 1, 2)
+            image = image.permute(0, 3, 1, 2)
+            if "Segmenter" in model.name:
+                image = image.permute(0, 3, 1, 2)
             output = model(image.to(device))
             loss = criterion(output, mask.squeeze())
             epoch_losses.append(loss.item())
@@ -52,7 +56,7 @@ def test_one_epoch(model, dataloader, criterion, device):
             # KL Divergence
             tmp_out = output.argmax(dim=1)
             tmp_kl_div = []
-            for i in range(dataloader.batch_size):
+            for i in range(mask.shape[0]):
                 distrib_mask = torch.zeros(N_CLASSES).to(device)
             
                 tmp_class, tmp_n = torch.unique(mask[i], return_counts=True)
@@ -82,11 +86,12 @@ def test_one_epoch(model, dataloader, criterion, device):
     return epoch_loss, epoch_jac_idx, epoch_kl_div
 
 
-def train(model, train_dataloader, test_dataloader, optimizer, criterion, device, n_epochs):    
+def train(model, train_dataloader, test_dataloader, optimizer, criterion, device, n_epochs, patience=10):    
     with mlflow.start_run():
         log_param('batch_size', train_dataloader.batch_size)
         log_param('lr', optimizer.param_groups[0]['lr'])
-
+        best_loss = 100
+        cpt = 0
         for epoch in range(n_epochs):
             train_loss = train_one_epoch(model, train_dataloader, optimizer, criterion, device)
             torch.cuda.empty_cache()
@@ -96,4 +101,13 @@ def train(model, train_dataloader, test_dataloader, optimizer, criterion, device
             log_metric('test_loss', test_loss, step=epoch)
             log_metric('test_jac_idx', test_jac_idx, step=epoch)
             log_metric('test_kl_div', test_kl_div, step=epoch)
-            torch.save(model.state_dict(), MODEL_DIR.joinpath(f'{model.name}.pth'))
+            if test_loss<best_loss:
+                best_loss = test_loss
+                cpt=0
+                torch.save(model.state_dict(), MODEL_DIR.joinpath(f'{model.name}.pth'))
+            else:
+                cpt+=1
+                if cpt>=patience:
+                    print(f'Best Test Loss : {best_loss}')
+                    return
+            
